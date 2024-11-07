@@ -1,7 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const dns = require('dns');
 const app = express();
+
+//Middleware to parse body
+app.use(express.urlencoded({ extended: true }));
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -18,6 +22,18 @@ app.get('/', function(req, res) {
 app.get('/api/hello', function(req, res) {
   res.json({ greeting: 'hello API' });
 });
+
+app.post('/api/shorturl', (req, res) => {
+  let url =  new URL(req.body.url);
+  let hostname = url.hostname
+  console.log(hostname)
+  dns.lookup(hostname, (err, address) => {
+    if (err) {
+      return res.json({error: 'invalid url'})
+    }
+    return res.json({original_url: url, short_url: address})
+  })
+})
 
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
