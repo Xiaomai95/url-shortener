@@ -1,3 +1,8 @@
 # URL Shortener Microservice
 
-This is the boilerplate code for the URL Shortener Microservice project. Instructions for building your project can be found at https://www.freecodecamp.org/learn/back-end-development-and-apis/back-end-development-and-apis-projects/url-shortener-microservice.
+[What?]
+
+# Features:
+- MongoDB to store original url's 
+- dns to verify the URL submitted, returning a json with error if error exists
+- middleware: Express' urlencoded method to parse URL-encoded data, allowing the data to be requested from request.body in the POST request.
