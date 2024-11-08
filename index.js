@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const dns = require('dns');
 const mongoose = require('mongoose');
-const generateShortId= require('ssid')
+const generateShortId = require('ssid')
 const app = express();
 
 //Middleware to parse URL-encoded data, used later in POST request
@@ -36,20 +36,38 @@ mongoose.connection.on('disconnected', () => {
   console.log('disconnected')
 })
 
+//Create schema - blueprint for the model
+const urlSchema = new mongoose.Schema(
+  {
+    original_url: String,
+    short_url: String
+  }
+);
 
+//Create model
+const urlModel = mongoose.model('URL', urlSchema)
 
-app.post('/api/shorturl', (req, res) => {
+app.post('/api/shorturl', async (req, res) => {
   let url =  new URL(req.body.url);
   let hostname = url.hostname
-  console.log(hostname)
-  dns.lookup(hostname, (err, address) => {
+  dns.lookup(hostname, async (err) => {
     if (err) {
       return res.json({error: 'invalid url'})
     }
-    return res.json({original_url: url, short_url: address})
+    
+    let shortUrl = generateShortId();
+    
+    try {
+      let newEntry = new urlModel({original_url: url, short_url: shortUrl})
+      const result = await newEntry.save()
+      res.json(result)
+    } catch (e) {
+      res.status(500).res.json({error: 'error saving to database'})
+    }
+    
   })
 })
-
+  
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
 });
