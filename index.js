@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const dns = require('dns');
 const mongoose = require('mongoose');
-const generateShortId = require('ssid')
+const generateRandomId = require('quickidgen');
 const app = express();
 
 //Middleware to parse URL-encoded data, used later in POST request
@@ -21,7 +21,7 @@ app.get('/', function(req, res) {
 });
 
 //Connect to Mongoose
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.MONGO_URI);
 
 //Check connection
 mongoose.connection.on('connected', () => {
@@ -48,25 +48,52 @@ const urlSchema = new mongoose.Schema(
 const urlModel = mongoose.model('URL', urlSchema)
 
 app.post('/api/shorturl', async (req, res) => {
-  let url =  new URL(req.body.url);
+  let url =  new URL(req.body.url); //urlencoded middleware allows access to req.body
   let hostname = url.hostname
   dns.lookup(hostname, async (err) => {
     if (err) {
       return res.json({error: 'invalid url'})
     }
     
-    let shortUrl = generateShortId();
+    let shortUrl = generateRandomId({
+      length: 10,
+      useNumbers: true,
+      useLowercase: false,
+      useUppercase: false,
+      useSpecialChars: false,
+    });
     
     try {
       let newEntry = new urlModel({original_url: url, short_url: shortUrl})
       const result = await newEntry.save()
-      res.json(result)
+      return res.json(result)
     } catch (e) {
-      res.status(500).res.json({error: 'error saving to database'})
+      return res.status(500).json({error: 'error saving to database'})
     }
-    
   })
 })
+
+//endpoint to redirect to original url
+app.get('/api/shorturl/:shortUrl',  async (req, res) => {
+
+  try {
+    let shortUrlParam = Number(req.params.shortUrl);
+    let urlQuery = urlModel.where({short_url: shortUrlParam})
+    let findUrl = await urlQuery.findOne();
+
+    if (findUrl) {
+      return res.redirect(findUrl.original_url)
+    }
+    else {
+      return res.status(404).json({error: 'Could not find short url'})
+    }
+
+  } catch (e) {
+    return res.status(500).json({error: 'Invalid url'})
+  }
+    
+  });
+
   
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
